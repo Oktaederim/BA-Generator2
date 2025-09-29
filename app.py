@@ -8,6 +8,7 @@ st.set_page_config(page_title="Betriebsanweisung Generator", layout="centered")
 
 st.title("📄 Betriebsanweisung Generator nach DGUV 211-010")
 
+# Eingabefelder
 firmenname = st.text_input("Firmenname")
 nr = st.text_input("Nummer")
 arbeitsbereich = st.text_input("Arbeitsbereich")
@@ -24,45 +25,61 @@ pictogramme = st.file_uploader("Piktogramme hochladen", type=["png", "jpg", "jpe
 
 datum = datetime.today().strftime('%d.%m.%Y')
 
-# PDF-Erstellung
-def create_pdf(path):
+# PDF-Erstellung mit Vorlage und Koordinaten
+def create_pdf(path, template_path):
     pdf = FPDF()
     pdf.add_page()
-    pdf.set_font("Arial", 'B', 14)
-    pdf.cell(200, 10, f"{firmenname} - BETRIEBSANWEISUNG Nr. {nr}", ln=True, align='C')
 
-    pdf.set_font("Arial", size=12)
-    pdf.multi_cell(0, 10, f"Arbeitsbereich: {arbeitsbereich}\nArbeitsplatz: {arbeitsplatz}\nTätigkeit: {taetigkeit}")
+    # Hintergrundbild (PNG der DGUV-Vorlage)
+    if os.path.exists(template_path):
+        pdf.image(template_path, x=0, y=0, w=210, h=297)  # DIN A4
 
-    sections = {
-        "Gefahren für Mensch und Umwelt": gefahren,
-        "Schutzmaßnahmen und Verhaltensregeln": schutz,
-        "Verhalten im Gefahrfall": verhalten_gefahrfall,
-        "Erste Hilfe": erste_hilfe,
-        "Sachgerechte Entsorgung": entsorgung
-    }
+    pdf.set_font("Arial", size=10)
 
-    for title, content in sections.items():
-        pdf.set_font("Arial", 'B', 12)
-        pdf.cell(0, 10, title, ln=True)
-        pdf.set_font("Arial", size=12)
-        pdf.multi_cell(0, 8, content)
+    # Kopfbereich
+    pdf.set_xy(25, 32)
+    pdf.multi_cell(0, 5, f"{firmenname} - Betriebsanweisung Nr. {nr}")
 
+    pdf.set_xy(25, 42)
+    pdf.multi_cell(0, 5, f"Arbeitsbereich: {arbeitsbereich}\nArbeitsplatz: {arbeitsplatz}\nTätigkeit: {taetigkeit}")
+
+    # Gefahren
+    pdf.set_xy(25, 80)
+    pdf.multi_cell(160, 6, gefahren)
+
+    # Schutzmaßnahmen
+    pdf.set_xy(25, 120)
+    pdf.multi_cell(160, 6, schutz)
+
+    # Verhalten im Gefahrfall
+    pdf.set_xy(25, 160)
+    pdf.multi_cell(160, 6, verhalten_gefahrfall)
+
+    # Erste Hilfe
+    pdf.set_xy(25, 200)
+    pdf.multi_cell(160, 6, erste_hilfe)
+
+    # Entsorgung
+    pdf.set_xy(25, 240)
+    pdf.multi_cell(160, 6, entsorgung)
+
+    # Piktogramme unten einfügen
     if pictogramme:
-        pdf.set_font("Arial", 'B', 12)
-        pdf.cell(0, 10, "Piktogramme:", ln=True)
+        x_pos = 25
+        y_pos = 270
         for pict in pictogramme:
             tmp_path = os.path.join("/tmp", pict.name)
             with open(tmp_path, "wb") as f:
                 f.write(pict.getbuffer())
-            pdf.image(tmp_path, w=20)
+            pdf.image(tmp_path, x=x_pos, y=y_pos, w=20)
+            x_pos += 25
 
-    pdf.set_font("Arial", size=10)
-    pdf.cell(0, 10, f"Datum: {datum}   Unterschrift: ___________________", ln=True, align='L')
+    pdf.set_xy(25, 285)
+    pdf.cell(0, 5, f"Datum: {datum}   Unterschrift: ___________________", ln=True)
 
     pdf.output(path)
 
-# DOCX-Erstellung
+# DOCX-Erstellung (einfach gehalten)
 def create_docx(path):
     doc = Document()
     doc.add_heading(f"{firmenname} - BETRIEBSANWEISUNG Nr. {nr}", 0)
@@ -83,10 +100,21 @@ def create_docx(path):
     doc.add_paragraph(f"Datum: {datum}   Unterschrift: ___________________")
     doc.save(path)
 
+# Datei-Upload für Vorlage
+st.subheader("Vorlage hochladen (PNG der DGUV-Vorlage)")
+template_file = st.file_uploader("Vorlage hochladen", type=["png"])
+
 # Buttons für Export
 if st.button("📥 PDF erstellen"):
+    if template_file:
+        template_path = os.path.join("/tmp", template_file.name)
+        with open(template_path, "wb") as f:
+            f.write(template_file.getbuffer())
+    else:
+        template_path = ""
+
     pdf_path = "/tmp/betriebsanweisung.pdf"
-    create_pdf(pdf_path)
+    create_pdf(pdf_path, template_path)
     with open(pdf_path, "rb") as f:
         st.download_button("PDF herunterladen", f, file_name="betriebsanweisung.pdf")
 
