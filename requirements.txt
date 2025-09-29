@@ -1,0 +1,6 @@
+### 📂 Datei: requirements.txt
+
+
+streamlit
+fpdf
+python-docx
