@@ -104,6 +104,9 @@ def create_docx(path):
 st.subheader("Vorlage hochladen (PNG der DGUV-Vorlage)")
 template_file = st.file_uploader("Vorlage hochladen", type=["png"])
 
+if template_file:
+    st.image(template_file, caption="Hochgeladene Vorlage", use_column_width=True)
+
 # Buttons für Export
 if st.button("📥 PDF erstellen"):
     if template_file:
